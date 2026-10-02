@@ -1,0 +1,48 @@
+name: 🎵 Spotify Hit Hunter
+
+on:
+  schedule:
+    # 20:29 UTC = 23:59 Tehran Time (Thursdays)
+    - cron: '29 20 * * 4'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository 🛎️
+        uses: actions/checkout@v3
+
+      - name: Install FFmpeg (For Audio Processing) 🎬
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Set up Python 🐍
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies 📦
+        # yt-dlp همون نینجاییه که بدون API از یوتیوب و هزاران سایت دیگه دانلود میکنه
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests yt-dlp beautifulsoup4 telebot
+
+      - name: Prepare Folders 📄
+        run: |
+          mkdir -p scripts downloads
+
+      - name: Run Modular Scraper Engine 👾
+        env:
+          # فقط به توکن ربات تلگرام و آیدی کانال نیاز داریم!
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHANNEL_ID: ${{ secrets.TG_CHANNEL_ID }}
+        run: |
+          if [ -f "scripts/pipeline.py" ]; then
+            python scripts/pipeline.py
+          else
+            echo "❌ No runnable script found in scripts/!" && exit 1
+          fi
