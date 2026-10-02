@@ -1,12 +1,7 @@
 import os
-import shutil
 from sources import scrape_spotify_hits
 from download import download_audio
 from notify import send_to_channel
-
-# فیلترهای سخت‌گیرانه ما
-MIN_VIEWS = 1000000
-MIN_LIKES = 50000
 
 def main():
     print("=" * 65)
@@ -32,18 +27,18 @@ def main():
         
         # 3. ارزیابی شکار!
         if not audio_info or not audio_info.get("filepath"):
-            print(f"⚠️ Skipped: Failed to track down audio for '{search_query}'. Moving to next victim...")
+            print(f"⚠️ Skipped: Failed to track down audio for '{search_query}'. Target is hiding too well... Moving to next victim...")
             continue
 
         print(f"🔥 Successfully captured: {audio_info['title']} -> Ready for Telegram Launch!")
 
-            
-        # 3. ارسال به تلگرام با ساختار مرتب
+        # 4. ارسال به تلگرام با ساختار مرتب
         success = send_to_channel(audio_info, track)
         if success:
             print("✅ Successfully uploaded to Telegram!")
-            # حذف فایل برای جلوگیری از پر شدن حجم سرور گیت‌هاب
-            os.remove(audio_info['filepath'])
+            # رد گم کنی! حذف فایل برای جلوگیری از پر شدن حجم سرور گیت‌هاب
+            if os.path.exists(audio_info['filepath']):
+                os.remove(audio_info['filepath'])
 
     print("\n🏁 Processing finished successfully! The channel is now on 🔥.")
 
