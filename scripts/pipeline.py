@@ -6,7 +6,7 @@ from notify import send_to_channel
 
 # فیلترهای سخت‌گیرانه ما
 MIN_VIEWS = 1000000
-MIN_LIKES = 1000000
+MIN_LIKES = 50000
 
 def main():
     print("=" * 65)
