@@ -4,24 +4,28 @@ import yt_dlp
 
 def download_audio(search_query):
     """
-    دانلود تضمینی بدون نیاز به لاگین یا فرار از بات‌گیر یوتیوب
-    با تمرکز روی SoundCloud و جستجوی ۵ کاندیدا برای دور زدن DRM
+    موتور دانلود پرسرعت و سبک برای پردازش انبوه (Bulk Processing)
     """
-    # پاکسازی صحنه جرم: حذف فایل‌های قبلی برای جلوگیری از قاطی شدن آهنگ‌ها
-    if os.path.exists("downloads"):
-        shutil.rmtree("downloads")
-    os.makedirs("downloads", exist_ok=True)
-    
     clean_query = search_query.replace(" audio", "").strip()
-    print(f"🎵 Searching tracks for: {clean_query}")
+    
+    # پوشه اختصاصی
+    download_dir = "downloads"
+    os.makedirs(download_dir, exist_ok=True)
+    
+    # تمیزکاری فایل‌های به جا مانده قبلی
+    for f in os.listdir(download_dir):
+        try:
+            os.remove(os.path.join(download_dir, f))
+        except Exception:
+            pass
 
-    # استراتژی اول: استفاده از ساوندکلاد با ۵ شانس مجدد!
+    # تنظیمات ساوندکلاد (انتخاب هوشمند ۳ نتیجه اول به جای ۵ تا برای بالا بردن سرعت)
     sc_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
         'quiet': True,
-        'ignoreerrors': True,  # به ارورهای DRM می‌خندیم و رد میشیم!
-        'outtmpl': 'downloads/%(title)s.%(ext)s',
+        'ignoreerrors': True,
+        'outtmpl': f'{download_dir}/track.%(ext)s',  # نام ثابت برای دوری از کاراکترهای عجیب غریب
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -29,68 +33,59 @@ def download_audio(search_query):
         }],
     }
 
+    print(f"   🔍 Hunting: {clean_query}")
+
+    # اولویت ۱: ساوندکلاد
     try:
-        print("   🔍 Searching on SoundCloud (Checking top 5 candidates for DRM-free version)...")
         with yt_dlp.YoutubeDL(sc_opts) as ydl:
-            # فقط اطلاعات ۵ تا نتیجه اول رو می‌گیریم بدون دانلود آنی
-            info = ydl.extract_info(f"scsearch5:{clean_query}", download=False)
-            
+            info = ydl.extract_info(f"scsearch3:{clean_query}", download=False)
             if info and 'entries' in info:
-                for idx, entry in enumerate(info['entries']):
+                for entry in info['entries']:
                     if not entry:
                         continue
-                    
                     try:
-                        print(f"      🥷 Attempting candidate {idx + 1}...")
-                        # تلاش برای دانلود همین یک کاندیدا
                         target_url = entry.get('url') or entry.get('webpage_url')
                         ydl.download([target_url])
                         
-                        # بررسی اینکه آیا واقعا فایل mp3 ساخته شد؟
-                        for file in os.listdir("downloads"):
-                            if file.endswith(".mp3"):
-                                filepath = os.path.join("downloads", file)
-                                print(f"   ✅ Successfully snuck out with: {file}")
-                                return {
-                                    "filepath": filepath,
-                                    "title": entry.get('title', clean_query),
-                                    "url": entry.get('permalink_url', target_url),
-                                    "duration": entry.get('duration', 0)
-                                }
-                    except Exception as inner_e:
-                        print(f"      ⏩ Candidate {idx + 1} blocked by DRM or failed. Moving to next...")
+                        target_file = os.path.join(download_dir, "track.mp3")
+                        if os.path.exists(target_file):
+                            return {
+                                "filepath": target_file,
+                                "title": entry.get('title', clean_query),
+                                "url": entry.get('permalink_url', target_url),
+                                "duration": entry.get('duration', 0)
+                            }
+                    except Exception:
                         continue
-    except Exception as e:
-        print(f"   ⚠️ SoundCloud master attempt failed: {e}")
+    except Exception:
+        pass
 
-    # استراتژی دوم: فال‌بک در صورت شکست کامل ساوندکلاد
-    print("   🌐 Trying direct open audio search fallback...")
+    # اولویت ۲: فال‌بک سریع یوتیوب با شبیه‌ساز اندروید
     try:
-        archive_opts = {
+        yt_opts = {
             'format': 'bestaudio/best',
-            'extractor_args': {'youtube': {'player_client': ['android', 'web']}}, # کلک کلاینت موبایل
+            'extractor_args': {'youtube': {'player_client': ['android']}},
             'noplaylist': True,
             'quiet': True,
-            'outtmpl': 'downloads/%(title)s.%(ext)s',
+            'outtmpl': f'{download_dir}/track.%(ext)s',
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
         }
-        with yt_dlp.YoutubeDL(archive_opts) as ydl:
+        with yt_dlp.YoutubeDL(yt_opts) as ydl:
             info = ydl.extract_info(f"ytsearch1:{clean_query}", download=True)
-            if info and 'entries' in info and len(info['entries']) > 0:
+            target_file = os.path.join(download_dir, "track.mp3")
+            if os.path.exists(target_file) and info.get('entries'):
                 item = info['entries'][0]
-                for file in os.listdir("downloads"):
-                    if file.endswith(".mp3"):
-                        return {
-                            "filepath": os.path.join("downloads", file),
-                            "title": item.get('title', clean_query),
-                            "url": item.get('webpage_url', ''),
-                            "duration": item.get('duration', 0)
-                        }
-    except Exception as e:
-        print(f"   ❌ Final fallback failed (YouTube is too paranoid today): {e}")
+                return {
+                    "filepath": target_file,
+                    "title": item.get('title', clean_query),
+                    "url": item.get('webpage_url', ''),
+                    "duration": item.get('duration', 0)
+                }
+    except Exception:
+        pass
 
     return None
