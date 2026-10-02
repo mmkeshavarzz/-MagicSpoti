@@ -29,8 +29,8 @@ jobs:
         # yt-dlp همون نینجاییه که بدون API از یوتیوب و هزاران سایت دیگه دانلود میکنه
         run: |
           python -m pip install --upgrade pip
-          pip install requests yt-dlp beautifulsoup4 telebot
-
+          pip install requests yt-dlp beautifulsoup4 pyTelegramBotAPI
+          
       - name: Prepare Folders 📄
         run: |
           mkdir -p scripts downloads
