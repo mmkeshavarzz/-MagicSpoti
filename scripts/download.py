@@ -29,7 +29,7 @@ def download_audio(search_query):
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
-            'preferredquality': '192',
+            'preferredquality': '320',
         }],
     }
 
@@ -71,7 +71,7 @@ def download_audio(search_query):
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
-                'preferredquality': '192',
+                'preferredquality': '320',
             }],
         }
         with yt_dlp.YoutubeDL(yt_opts) as ydl:
