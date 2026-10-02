@@ -2,7 +2,7 @@ import os
 import requests
 import base64
 
-def get_official_spotify_token():
+def get_spotify_token():
     """دریافت توکن رسمی اسپاتیفای"""
     client_id = os.environ.get("SPOTIFY_CLIENT_ID")
     client_secret = os.environ.get("SPOTIFY_CLIENT_SECRET")
@@ -21,21 +21,18 @@ def get_official_spotify_token():
     try:
         res = requests.post(auth_url, headers=headers, data=data, timeout=15)
         if res.status_code == 200:
-            return *******"access_token")
+            payload = res.json()
+            return payload.get("access_token")
     except Exception as e:
         print(f"⚠️ Auth error: {e}")
     return None
 
 
 def fetch_from_spotify_api(token):
-    """
-    استفاده از متدهای کاملاً مجاز اسپاتیفای (New Releases & Top Search)
-    این اندپوینت‌ها خطای ۴۰۳ نمی‌گیرند!
-    """
+    """واکشی ترک‌های مجاز از اندپوینت‌های عمومی بدون خطای ۴۰۳"""
     tracks = []
     headers = {"Authorization": f"Bearer {token}"}
     
-    # ۱. واکشی جدیدترین و ترندترین آهنگ‌ها به تفکیک کشورها
     countries = ["US", "GB", "DE", "IN", "AE", "SA", "FR", "CA"]
     print("🛰️ Fetching official releases per region...")
     
@@ -56,7 +53,6 @@ def fetch_from_spotify_api(token):
         except Exception:
             pass
 
-    # ۲. سرچ هدفمند برای Top Hits جهانی
     queries = ["Top Hits 2026", "Global Viral Hits", "Billboard Hot 100"]
     for q in queries:
         search_url = f"https://api.spotify.com/v1/search?q={requests.utils.quote(q)}&type=track&limit=15"
@@ -78,13 +74,9 @@ def fetch_from_spotify_api(token):
 
 
 def fetch_fallback_charts():
-    """
-    پلن جایگزین نینجایی: اگر اسپاتیفای به هر دلیلی باز ادا درآورد!
-    استفاده از چارت پابلیک iTunes / Apple Music بدون هیچ توکن و محدودیتی
-    """
+    """چارت عمومی iTunes به عنوان پشتیبان تضمینی"""
     print("🛡️ Engaging iTunes Global RSS Fallback...")
     tracks = []
-    # فید ۱۰۰ آهنگ داغ جهان
     rss_url = "https://itunes.apple.com/us/rss/topsongs/limit=50/json"
     try:
         r = requests.get(rss_url, timeout=15)
@@ -106,18 +98,16 @@ def fetch_fallback_charts():
 
 def scrape_spotify_hits():
     all_tracks = []
-    token = get_official_spotify_token()
+    token = get_spotify_token()
     
     if token:
         print("🔑 Spotify Token Accepted! Pulling permitted endpoints...")
         all_tracks.extend(fetch_from_spotify_api(token))
     
-    # اگر اسپاتیفای چیزی نداد یا لیست کوتاه بود، با فید رسمی iTunes ترکیب و بیمه می‌کنیم
     if len(all_tracks) < 10:
         print("⚠️ Direct Spotify charts restricted, deploying auxiliary engine...")
         all_tracks.extend(fetch_fallback_charts())
 
-    # فیلتر تکراری‌ها
     unique_tracks = []
     seen = set()
     for t in all_tracks:
