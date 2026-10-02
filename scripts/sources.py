@@ -43,7 +43,7 @@ def fetch_from_spotify_api(token):
     one_week_ago = today - timedelta(days=7)
 
     for country in countries:
-        url = f"https://api.spotify.com/v1/browse/new-releases?country={country}&limit=20"
+        url = f"https://api.spotify.com/v1/browse/new-releases?country={country}&limit=200"
         try:
             r = requests.get(url, headers=headers, timeout=10)
             if r.status_code == 200:
@@ -68,7 +68,7 @@ def fetch_from_spotify_api(token):
 
     queries = ["Top Hits 2026", "Global Viral Hits", "Billboard Hot 100"]
     for q in queries:
-        search_url = f"https://api.spotify.com/v1/search?q={requests.utils.quote(q)}&type=track&limit=15"
+        search_url = f"https://api.spotify.com/v1/search?q={requests.utils.quote(q)}&type=track&limit=100"
         try:
             r = requests.get(search_url, headers=headers, timeout=10)
             if r.status_code == 200:
@@ -95,7 +95,7 @@ def fetch_from_spotify_api(token):
 
     print("🪗 Fetching Persian, Russian & Global trends...")
     for item in custom_searches:
-        search_url = f"https://api.spotify.com/v1/search?q={requests.utils.quote(item['q'])}&type=track&limit=10"
+        search_url = f"https://api.spotify.com/v1/search?q={requests.utils.quote(item['q'])}&type=track&limit=100"
         try:
             r = requests.get(search_url, headers=headers, timeout=10)
             if r.status_code == 200:
@@ -118,7 +118,7 @@ def fetch_fallback_charts():
     """چارت عمومی iTunes به عنوان پشتیبان تضمینی"""
     print("🛡️ Engaging iTunes Global RSS Fallback...")
     tracks = []
-    rss_url = "https://itunes.apple.com/us/rss/topsongs/limit=50/json"
+    rss_url = "https://itunes.apple.com/us/rss/topsongs/limit=200/json"
     try:
         r = requests.get(rss_url, timeout=15)
         if r.status_code == 200:
