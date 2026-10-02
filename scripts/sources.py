@@ -83,6 +83,33 @@ def fetch_from_spotify_api(token):
         except Exception:
             pass
 
+    # 🚀 این همون بخش جادویی ایرانی و روسی + هیت‌های جهانی:
+    custom_searches = [
+        {"q": "Persian Hits 2026", "tag": "Iran Hit 🇮🇷"},
+        {"q": "اهنگ جدید", "tag": "Iran Fresh 🇮🇷"},
+        {"q": "Русские хиты", "tag": "Russia Hit 🇷🇺"},
+        {"q": "Russian Viral Hits", "tag": "Russia Viral 🇷🇺"},
+        {"q": "Global Viral Hits", "tag": "Global 🌍"},
+        {"q": "Billboard Hot 100", "tag": "Billboard 🔥"}
+    ]
+
+    print("🪗 Fetching Persian, Russian & Global trends...")
+    for item in custom_searches:
+        search_url = f"https://api.spotify.com/v1/search?q={requests.utils.quote(item['q'])}&type=track&limit=10"
+        try:
+            r = requests.get(search_url, headers=headers, timeout=10)
+            if r.status_code == 200:
+                items = r.json().get('tracks', {}).get('items', [])
+                for tr in items:
+                    artist = tr['artists'][0]['name'] if tr.get('artists') else 'Unknown'
+                    tracks.append({
+                        "title": tr.get('name'),
+                        "artist": artist,
+                        "region": item['tag']
+                    })
+        except Exception:
+            pass
+
     return tracks
 
 
