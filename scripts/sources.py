@@ -1,6 +1,8 @@
 import os
 import requests
 import base64
+from datetime import datetime, timedelta
+
 
 def get_spotify_token():
     """دریافت توکن رسمی اسپاتیفای"""
@@ -36,20 +38,31 @@ def fetch_from_spotify_api(token):
     countries = ["US", "GB", "DE", "IN", "AE", "SA", "FR", "CA"]
     print("🛰️ Fetching official releases per region...")
     
+    # بازه زمانی: از ۷ روز پیش تا انتهای امروز
+    today = datetime.utcnow().date()
+    one_week_ago = today - timedelta(days=7)
+
     for country in countries:
-        url = f"https://api.spotify.com/v1/browse/new-releases?country={country}&limit=6"
+        url = f"https://api.spotify.com/v1/browse/new-releases?country={country}&limit=20"
         try:
             r = requests.get(url, headers=headers, timeout=10)
             if r.status_code == 200:
                 albums = r.json().get('albums', {}).get('items', [])
                 for album in albums:
-                    artist = album['artists'][0]['name'] if album.get('artists') else 'Unknown'
-                    title = album.get('name')
-                    tracks.append({
-                        "title": title,
-                        "artist": artist,
-                        "region": f"{country} Hit 🔥"
-                    })
+                    rel_date_str = album.get('release_date', '')
+                    try:
+                        rel_date = datetime.strptime(rel_date_str[:10], "%Y-%m-%d").date()
+                        # شرط: فقط آهنگ‌های ۷ روز اخیر تا امروز
+                        if one_week_ago <= rel_date <= today:
+                            artist = album['artists'][0]['name'] if album.get('artists') else 'Unknown'
+                            title = album.get('name')
+                            tracks.append({
+                                "title": title,
+                                "artist": artist,
+                                "region": f"{country} ({rel_date_str}) 🔥"
+                            })
+                    except Exception:
+                        continue
         except Exception:
             pass
 
@@ -71,6 +84,7 @@ def fetch_from_spotify_api(token):
             pass
 
     return tracks
+
 
 
 def fetch_fallback_charts():
