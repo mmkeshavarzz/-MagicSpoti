@@ -1,101 +1,119 @@
+import os
 import requests
+import base64
 
-def get_spotify_token():
+def get_official_spotify_token():
     """
-    هک نینجایی! 🥷 
-    گرفتن توکن موقت و ناشناس اسپاتیفای بدون نیاز به Client ID و Secret.
-    ما خودمون رو یک مرورگر وب جا می‌زنیم!
+    دریافت توکن رسمی و ضدگلوله از طریق Spotify Developer API
     """
-    url = "https://open.spotify.com/get_access_token?reason=transport&productType=web_player"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-    }
-    try:
-        response = requests.get(url, headers=headers)
-        return response.json().get("accessToken")
-    except Exception as e:
-        print(f"❌ Failed to steal Spotify Ghost Token: {e}")
+    client_id = os.environ.get("SPOTIFY_CLIENT_ID")
+    client_secret = os.environ.get("SPOTIFY_CLIENT_SECRET")
+
+    if not client_id or not client_secret:
+        print("❌ CRITICAL: SPOTIFY_CLIENT_ID or SPOTIFY_CLIENT_SECRET is missing in Repo Secrets!")
         return None
 
-def fetch_playlist_tracks(token, playlist_id, limit, region_name, seen_tracks):
-    """
-    حمله به یک پلی‌لیست خاص و بیرون کشیدن آهنگ‌ها
-    """
-    tracks = []
-    # API رسمی اسپاتیفای برای واکشی آهنگ‌های پلی‌لیست
-    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?limit={limit}"
-    headers = {"Authorization": f"Bearer {token}"}
+    print("🔑 Authenticating with Official Spotify Developer API...")
+    auth_url = "https://accounts.spotify.com/api/token"
+    auth_header = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
     
+    headers = {
+        "Authorization": f"Basic {auth_header}",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    data = {"grant_type": "client_credentials"}
+
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.post(auth_url, headers=headers, data=data, timeout=15)
         if response.status_code == 200:
-            data = response.json()
-            for item in data.get("items", []):
-                track = item.get("track")
-                # ممکنه بعضی جاها آهنگ پاک شده باشه، پس چک می‌کنیم
-                if not track:
-                    continue
-                
-                artist = track["artists"][0]["name"]
-                title = track["name"]
-                
-                # یه شناسه یکتا می‌سازیم که یه آهنگ رو دو بار دانلود نکنیم (مثلا اگه یه آهنگ هم تو گلوبال بود هم تو آمریکا)
-                unique_id = f"{artist} - {title}".lower()
-                
-                if unique_id not in seen_tracks:
-                    seen_tracks.add(unique_id)
-                    tracks.append({
-                        "artist": artist,
-                        "title": title,
-                        "region": region_name
-                    })
+            token = response.json().get("access_token")
+            print("✅ Access Token acquired successfully! VIP pass granted.")
+            return token
         else:
-            print(f"⚠️ Playlist {region_name} denied access. Code: {response.status_code}")
+            print(f"❌ Failed to get token. Status: {response.status_code}, Response: {response.text}")
     except Exception as e:
-        print(f"⚠️ Network error on {region_name}: {e}")
-        
-    return tracks
+        print(f"❌ Error during authentication: {e}")
+
+    return None
+
 
 def scrape_spotify_hits():
     """
-    مغز متفکر عملیات جستجو!
+    استخراج گلوبال ۱۰۰ به همراه ۵ آهنگ برتر ۸ کشور منتخب
     """
-    print("🕵️‍♂️ Generating Ghost Token for Spotify bypass...")
-    token = get_spotify_token()
+    token = get_official_spotify_token()
     if not token:
-        print("💀 Mission Aborted: No token.")
+        print("💀 Mission Aborted: Could not obtain an access token.")
         return []
-        
+
+    headers = {"Authorization": f"Bearer {token}"}
     all_tracks = []
-    seen_tracks = set() # برای جلوگیری از تکراری شدن آهنگ‌ها
 
-    print("🌍 [PHASE 1] Stealing Global Top 100...")
-    # از اونجایی که اسپاتیفای چارت 100 تایی نداره، ما 50 تای برتر جهان + 50 تای وایرال (ترند شده) جهان رو با هم میکس می‌کنیم!
-    all_tracks.extend(fetch_playlist_tracks(token, "37i9dQZEVXbMDoHDwVN2tF", 50, "Global Top 50", seen_tracks))
-    all_tracks.extend(fetch_playlist_tracks(token, "37i9dQZEVXbLiRSasKsNU9", 50, "Global Viral 50", seen_tracks))
-
-    print("✈️ [PHASE 2] World Tour! Top 5 per country...")
-    # آیدی پلی‌لیست‌های برتر کشورهای مختلف
+    # لیست پلی‌لیست‌های Top 50 کشورها
     country_targets = {
         "USA 🇺🇸": "37i9dQZEVXbLRQDuF5jeBp",
         "UK 🇬🇧": "37i9dQZEVXbLnolsZ8PSNw",
         "Germany 🇩🇪": "37i9dQZEVXbJiZcmkrIHGU",
+        "India 🇮🇳": "37i9dQZEVXbLZ52XmnySJg",
+        "UAE 🇦🇪": "37i9dQZEVXbM4eD45J36h6",
+        "Saudi 🇸🇦": "37i9dQZEVXbIVYVBNw9XfK",
         "France 🇫🇷": "37i9dQZEVXbIPWwFssbupI",
-        "Canada 🇨🇦": "37i9dQZEVXbKj23U1GF4IR",
-        "Australia 🇦🇺": "37i9dQZEVXbJPcfkRz0wJ8",
-        "Brazil 🇧🇷": "37i9dQZEVXbMXbN3EUUhlg",
-        "Spain 🇪🇸": "37i9dQZEVXbNFJfN1Vq8d9"
+        "Canada 🇨🇦": "37i9dQZEVXbKj23U1GF4IR"
     }
 
-    for country, pid in country_targets.items():
-        print(f"   📍 Hitting {country} vault...")
-        all_tracks.extend(fetch_playlist_tracks(token, pid, 5, country, seen_tracks))
+    # فاز ۱: شکار ۱۰۰ آهنگ برتر جهان (Top 100 Global)
+    print("🌍 Scouting Top 100 Global...")
+    # اسپاتیفای در هر صفحه حداکثر ۵۰ تا میده؛ در ۲ صفحه ۱۰۰ تا رو جمع می‌کنیم:
+    for offset in [0, 50]:
+        url_global = f"https://api.spotify.com/v1/playlists/37i9dQZEVXbMDoHDwVN2tF/tracks?limit=50&offset={offset}"
+        try:
+            res = requests.get(url_global, headers=headers, timeout=15)
+            if res.status_code == 200:
+                items = res.json().get('items', [])
+                for item in items:
+                    track = item.get('track')
+                    if track and track.get('name'):
+                        artist_name = track['artists'][0]['name'] if track.get('artists') else 'Unknown'
+                        all_tracks.append({
+                            "title": track.get('name'),
+                            "artist": artist_name,
+                            "region": "Global 🌍"
+                        })
+            else:
+                print(f"⚠️ Warning: Global fetch failed on offset {offset} with status {res.status_code}")
+        except Exception as e:
+            print(f"⚠️ Error fetching global tracks: {e}")
 
-    print(f"🎉 Total unique tracks captured: {len(all_tracks)}")
-    return all_tracks
+    # فاز ۲: شکار ۵ تا آهنگ پرطرفدار از هر منطقه (Regional Top 5)
+    print("✈️ Scouting Regional Top Hits...")
+    for region_name, playlist_id in country_targets.items():
+        url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?limit=5"
+        try:
+            res = requests.get(url, headers=headers, timeout=15)
+            if res.status_code == 200:
+                items = res.json().get('items', [])
+                for item in items:
+                    track = item.get('track')
+                    if track and track.get('name'):
+                        artist_name = track['artists'][0]['name'] if track.get('artists') else 'Unknown'
+                        all_tracks.append({
+                            "title": track.get('name'),
+                            "artist": artist_name,
+                            "region": region_name
+                        })
+            else:
+                print(f"⚠️ Skipping {region_name}: Status {res.status_code}")
+        except Exception as e:
+            print(f"⚠️ Error fetching {region_name}: {e}")
 
-# تست اجرای محلی (وقتی فایل رو جدا ران کنی)
-if __name__ == "__main__":
-    hits = scrape_spotify_hits()
-    for idx, t in enumerate(hits):
-        print(f"{idx+1}. {t['artist']} - {t['title']} ({t['region']})")
+    # حذف آهنگ‌های تکراری احتمالی
+    unique_tracks = []
+    seen = set()
+    for t in all_tracks:
+        identifier = f"{t['title'].lower()} - {t['artist'].lower()}"
+        if identifier not in seen:
+            seen.add(identifier)
+            unique_tracks.append(t)
+
+    print(f"🎯 Total Unique Targets Locked: {len(unique_tracks)}")
+    return unique_tracks
