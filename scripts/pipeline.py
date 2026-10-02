@@ -23,12 +23,20 @@ def main():
     for track in hit_tracks:
         print(f"\n🔍 Investigating: {track['title']} by {track['artist']}")
         
-        # 2. جستجو و دانلود با دور زدن تحریم و قوانین
-        audio_info = download_audio(f"{track['artist']} - {track['title']} audio", MIN_VIEWS, MIN_LIKES)
+        # 1. تمیزکاری و آماده‌سازی کوئری بدون کلمات اضافه و آزاردهنده
+        search_query = f"{track['artist']} - {track['title']}"
+        print(f"🎯 Target Acquired: {search_query}")
+
+        # 2. جستجو و شکار موزیک با استراتژی نینجایی
+        audio_info = download_audio(search_query)
         
-        if not audio_info:
-            print("⚠️ Skipped: Did not meet minimum 1M views/likes or failed to download.")
+        # 3. ارزیابی شکار!
+        if not audio_info or not audio_info.get("filepath"):
+            print(f"⚠️ Skipped: Failed to track down audio for '{search_query}'. Moving to next victim...")
             continue
+
+        print(f"🔥 Successfully captured: {audio_info['title']} -> Ready for Telegram Launch!")
+
             
         # 3. ارسال به تلگرام با ساختار مرتب
         success = send_to_channel(audio_info, track)
