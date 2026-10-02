@@ -3,7 +3,8 @@ name: MagicSpoti Automation Engine 🎵
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 6,18 * * *'
+    - cron: '29 18 * * *'
+
 
 jobs:
   scrape-and-blast:
